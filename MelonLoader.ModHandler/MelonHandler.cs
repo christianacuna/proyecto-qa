@@ -111,7 +111,65 @@ namespace MelonLoader
             }
             Main.LegacySupport(_Mods, _Plugins, MelonLoaderBase._IsVRChat, MelonLoaderBase._IsBoneworks);
         }
+        public static int GetCountFiles(string filelocation, bool isPlugin = false)
+        {
+            string[] files = Directory.GetFiles(filelocation, "*.dll");
+            string[] zips = Directory.GetFiles(filelocation, "*.zip");
+            return files.Length + zips.Length;
+        }
 
+        public static bool CanLoadZips(string searchdir, bool plugins = false)
+        {
+            bool flag = false;
+            string[] zippedFiles = Directory.GetFiles(searchdir, "*.zip");
+            if (zippedFiles.Length > 0)
+            {
+                for (int i = 0; i < zippedFiles.Length; i++)
+                {
+                    string file = zippedFiles[i];
+                    if (string.IsNullOrEmpty(file))
+                        continue;
+                    try
+                    {
+                        using (var fileStream = File.OpenRead(file))
+                        {
+                            using (var zipInputStream = new ZipInputStream(fileStream))
+                            {
+                                flag = true;
+                            }
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        MelonLogger.LogError("Unable to load " + file + ":\n" + e.ToString());
+                        MelonLogger.Log("------------------------------");
+                    }
+                }
+            }
+            return flag;
+        }
+        public static bool VerifyDLL(string searchdir)
+        {
+            string[] files = Directory.GetFiles(searchdir, "*.dll");
+            bool flag = false;
+            if (files.Length > 0)
+            {
+                for (int i = 0; i < files.Length; i++)
+                {
+                    string file = files[i];
+                    if (string.IsNullOrEmpty(file))
+                        continue;
+
+                    bool file_extension_check = Path.GetFileNameWithoutExtension(file).EndsWith("-dev");
+                    if (!file_extension_check)
+                    {
+                        flag = true;
+                    }
+                    
+                }
+            }
+            return flag;
+        }
         public static void LoadFromFile(string filelocation, bool isPlugin = false) => LoadFromAssembly((Imports.IsDebugMode() ? Assembly.LoadFrom(filelocation) : Assembly.Load(File.ReadAllBytes(filelocation))), isPlugin, filelocation);
         public static void LoadFromAssembly(Assembly asm, bool isPlugin = false, string filelocation = null)
         {
@@ -386,7 +444,7 @@ namespace MelonLoader
                         try { _Plugins[i].VRChat_OnUiManagerInit(); } catch (Exception ex) { MelonLogger.LogMelonError(ex.ToString(), _Plugins[i].Info.Name); }
         }
 
-        private enum LoadMode
+        public enum LoadMode
         {
             NORMAL,
             DEV,
